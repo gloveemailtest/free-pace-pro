@@ -69,13 +69,20 @@ const Onboarding = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Function invocation error:", error);
+        throw error;
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.error || "Failed to generate training plan");
+      }
 
       toast.success("Your personalized training plan is ready!");
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Onboarding error:", error);
-      toast.error(error.message || "Failed to create training plan");
+      toast.error(error.message || "Failed to create training plan. Please try again.");
     } finally {
       setLoading(false);
     }

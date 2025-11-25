@@ -44,24 +44,7 @@ serve(async (req) => {
 2. Include easy runs, tempo runs, intervals, and long runs
 3. Follow the 10% rule for weekly mileage increases
 4. Include recovery weeks every 3-4 weeks
-5. Taper in the final 2-3 weeks before race day
-
-Format your response as a JSON array of weekly plans. Each week should have:
-- weekNumber: number
-- weekStartDate: ISO date string
-- totalMileage: number
-- workouts: array of daily workouts
-
-Each workout should include:
-- dayOfWeek: string (e.g., "Monday")
-- date: ISO date string
-- workoutType: "Easy Run" | "Tempo Run" | "Intervals" | "Long Run" | "Rest" | "Cross Training"
-- distance: number (miles, can be 0 for rest days)
-- description: detailed workout description
-- warmup: warmup instructions
-- mainWorkout: main workout details
-- cooldown: cooldown instructions
-- paceTarget: pace guidance (e.g., "8:30-9:00 min/mile")`;
+5. Taper in the final 2-3 weeks before race day`;
 
     const userPrompt = `Create a ${weeksUntilRace}-week marathon training plan for a runner with:
 - Current weekly mileage: ${weeklyMileage} miles
@@ -85,6 +68,50 @@ Generate a complete week-by-week plan starting from today (${today.toISOString()
           { role: "user", content: userPrompt }
         ],
         temperature: 0.7,
+        tools: [{
+          type: "function",
+          function: {
+            name: "create_training_plan",
+            description: "Create a structured marathon training plan",
+            parameters: {
+              type: "object",
+              properties: {
+                weeks: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      weekNumber: { type: "number" },
+                      weekStartDate: { type: "string" },
+                      totalMileage: { type: "number" },
+                      workouts: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            dayOfWeek: { type: "string" },
+                            date: { type: "string" },
+                            workoutType: { type: "string" },
+                            distance: { type: "number" },
+                            description: { type: "string" },
+                            warmup: { type: "string" },
+                            mainWorkout: { type: "string" },
+                            cooldown: { type: "string" },
+                            paceTarget: { type: "string" }
+                          },
+                          required: ["dayOfWeek", "date", "workoutType", "distance", "description"]
+                        }
+                      }
+                    },
+                    required: ["weekNumber", "weekStartDate", "totalMileage", "workouts"]
+                  }
+                }
+              },
+              required: ["weeks"]
+            }
+          }
+        }],
+        tool_choice: { type: "function", function: { name: "create_training_plan" } }
       }),
     });
 
@@ -103,18 +130,21 @@ Generate a complete week-by-week plan starting from today (${today.toISOString()
     }
 
     const data = await response.json();
-    const planText = data.choices[0].message.content;
-    
     console.log("AI response received, parsing plan...");
     
-    // Extract JSON from the response (AI might wrap it in markdown code blocks)
+    // Extract structured data from tool call
     let planData;
     try {
-      const jsonMatch = planText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        planData = JSON.parse(jsonMatch[0]);
-      } else {
-        planData = JSON.parse(planText);
+      const toolCall = data.choices[0].message.tool_calls?.[0];
+      if (!toolCall) {
+        throw new Error("No tool call in AI response");
+      }
+      
+      const functionArgs = JSON.parse(toolCall.function.arguments);
+      planData = functionArgs.weeks;
+      
+      if (!Array.isArray(planData) || planData.length === 0) {
+        throw new Error("Invalid plan data structure");
       }
     } catch (parseError) {
       console.error("Failed to parse AI response:", parseError);
