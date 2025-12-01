@@ -8,6 +8,11 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import WorkoutDetail from "./pages/WorkoutDetail";
+import CalendarPage from "./pages/CalendarPage";
+import StrengthPage from "./pages/StrengthPage";
+import StrengthDetail from "./pages/StrengthDetail";
+import InjuriesPage from "./pages/InjuriesPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +29,11 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/workout/:id" element={<WorkoutDetail />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/strength" element={<StrengthPage />} />
+          <Route path="/strength/:id" element={<StrengthDetail />} />
+          <Route path="/injuries" element={<InjuriesPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
