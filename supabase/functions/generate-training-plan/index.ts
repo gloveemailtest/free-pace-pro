@@ -38,22 +38,15 @@ serve(async (req) => {
     const race = new Date(raceDate);
     const weeksUntilRace = Math.floor((race.getTime() - today.getTime()) / (7 * 24 * 60 * 60 * 1000));
 
-    const systemPrompt = `You are an expert marathon training coach. Create a personalized training plan based on the runner's current fitness and goals. The plan should follow these principles:
+    // Generate only 2 weeks initially for faster response
+    const weeksToGenerate = Math.min(weeksUntilRace, 2);
 
-1. Progressive overload: Gradually increase mileage
-2. Include easy runs, tempo runs, intervals, and long runs
-3. Follow the 10% rule for weekly mileage increases
-4. Include recovery weeks every 3-4 weeks
-5. Taper in the final 2-3 weeks before race day`;
+    const systemPrompt = `You are an expert marathon coach. Create a brief ${weeksToGenerate}-week training plan. Be concise.`;
 
-    const userPrompt = `Create a ${weeksUntilRace}-week marathon training plan for a runner with:
-- Current weekly mileage: ${weeklyMileage} miles
-- Longest recent run: ${longestRun} miles
-- Goal marathon time: ${Math.floor(goalTimeMinutes / 60)}:${(goalTimeMinutes % 60).toString().padStart(2, '0')}
-- Training days per week: ${trainingDaysPerWeek}
-- Race date: ${raceDate}
-
-Generate a complete week-by-week plan starting from today (${today.toISOString().split('T')[0]}).`;
+    const userPrompt = `Create ${weeksToGenerate} weeks of marathon training starting ${today.toISOString().split('T')[0]}:
+- Weekly mileage: ${weeklyMileage} miles, longest run: ${longestRun} miles
+- Goal: ${Math.floor(goalTimeMinutes / 60)}:${(goalTimeMinutes % 60).toString().padStart(2, '0')}, ${trainingDaysPerWeek} days/week
+Include ${trainingDaysPerWeek} workouts per week with mix of easy runs, tempo, intervals, and long runs.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -62,7 +55,7 @@ Generate a complete week-by-week plan starting from today (${today.toISOString()
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-flash-lite",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
