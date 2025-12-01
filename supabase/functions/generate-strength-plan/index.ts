@@ -24,41 +24,54 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const { injuries, type } = await req.json();
+    const { injuries } = await req.json();
     
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get user from auth header
+    
+    // Get auth header and create authenticated client
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       throw new Error("No authorization header");
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace("Bearer ", "")
-    );
+    // Create client with user's JWT token for RLS
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
 
+    // Verify user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
+      console.error("Auth error:", authError);
       throw new Error("Authentication failed");
     }
 
+    console.log("Authenticated user:", user.id);
+
     // Get available exercises
-    const { data: exercises } = await supabase
+    const { data: exercises, error: exercisesError } = await supabase
       .from("strength_exercises")
       .select("*");
+
+    if (exercisesError) {
+      console.error("Error fetching exercises:", exercisesError);
+      throw new Error("Failed to fetch exercises");
+    }
 
     if (!exercises || exercises.length === 0) {
       throw new Error("No exercises available");
     }
 
-    // Build prompt based on type
+    // Build prompt
     let systemPrompt = `You are an expert running coach and physical therapist specializing in strength training for runners. 
 You create personalized strength workout plans that are safe, effective, and properly sequenced.`;
 
     let userPrompt = "";
-    let workoutName = "";
     let isInjuryFocused = false;
 
     if (injuries && injuries.length > 0) {
@@ -67,14 +80,12 @@ You create personalized strength workout plans that are safe, effective, and pro
         `- ${i.body_part} (${i.severity})${i.description ? `: ${i.description}` : ""}`
       ).join("\n");
       
-      workoutName = "Injury Recovery Workout";
       userPrompt = `Create a rehabilitation-focused strength workout for a runner with these injuries:
 ${injuryList}
 
 Focus on exercises that help with recovery and strengthening the affected areas without aggravating them.
 Include mobility work and exercises to prevent re-injury.`;
     } else {
-      workoutName = "Runner's Strength Session";
       userPrompt = `Create a general strength training workout for a runner.
 Focus on:
 - Core stability for better running form
@@ -175,7 +186,7 @@ Create a workout with 5-8 exercises, properly sequenced from activation to main 
       .from("strength_workouts")
       .insert({
         user_id: user.id,
-        name: workoutData.name || workoutName,
+        name: workoutData.name || "Runner's Strength Session",
         description: workoutData.description,
         duration_minutes: workoutData.duration_minutes,
         is_injury_focused: isInjuryFocused,
@@ -187,8 +198,10 @@ Create a workout with 5-8 exercises, properly sequenced from activation to main 
 
     if (workoutError) {
       console.error("Error creating workout:", workoutError);
-      throw workoutError;
+      throw new Error(`Failed to create workout: ${workoutError.message}`);
     }
+
+    console.log("Workout created:", newWorkout.id);
 
     // Create exercise map for lookup
     const exerciseMap = new Map(
@@ -221,6 +234,8 @@ Create a workout with 5-8 exercises, properly sequenced from activation to main 
 
       if (exercisesError) {
         console.error("Error adding exercises:", exercisesError);
+      } else {
+        console.log("Added", exerciseInserts.length, "exercises to workout");
       }
     }
 
