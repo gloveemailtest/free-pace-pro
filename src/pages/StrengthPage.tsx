@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
-import { Plus, Dumbbell, Heart, Clock, ChevronRight, Sparkles } from "lucide-react";
+import { Dumbbell, Heart, Clock, ChevronRight, Sparkles, Plus } from "lucide-react";
 import { format } from "date-fns";
 
 interface StrengthWorkout {
@@ -99,23 +99,20 @@ const StrengthPage = () => {
 
   return (
     <AppLayout title="Strength Training">
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-4 mb-8">
+      {/* Generate Workout */}
+      <div className="mb-8">
         <Button
-          className="bg-gradient-secondary"
+          className="bg-gradient-primary w-full sm:w-auto"
+          size="lg"
           onClick={generateGeneralWorkout}
           disabled={generating}
         >
-          <Sparkles className="h-4 w-4 mr-2" />
-          {generating ? "Generating..." : "Generate Workout"}
+          <Sparkles className="h-5 w-5 mr-2" />
+          {generating ? "Generating AI Workout..." : "Generate AI Strength Workout"}
         </Button>
-        <Button
-          variant="outline"
-          onClick={() => navigate("/injuries")}
-        >
-          <Heart className="h-4 w-4 mr-2" />
-          Injury-Based Plan
-        </Button>
+        <p className="text-sm text-muted-foreground mt-2">
+          AI will create a personalized runner-focused strength routine
+        </p>
       </div>
 
       {/* My Workouts */}
